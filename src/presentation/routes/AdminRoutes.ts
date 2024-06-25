@@ -1,0 +1,15 @@
+import { Router } from "express";
+import { AdminContrller } from "../controllers/AdminController";
+
+const router = Router();
+
+router.post('/admin/signup',AdminContrller.signUp);
+router.post('/admin/signin',AdminContrller.signIn);
+router.put('/admin/blockUser/:userId',AdminContrller.blockUser)
+router.put('/admin/unblockUser/:userId',AdminContrller.unblockUser)
+router.delete("/admin/deleteUser/:userId", AdminContrller.deleteUser);
+
+router.put('/admin/blockVendor/:vendorId',AdminContrller.blockVendor)
+router.put('/admin/unblockVendor/:vendorId',AdminContrller.unblockVendor)
+
+export default router;
