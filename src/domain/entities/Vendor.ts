@@ -9,8 +9,9 @@ export class Vendor {
     public otp: string | null,
     public otpCreatedAt: Date | null,
     public isVerified: boolean,
-
     public isBlocked: boolean,
+    public kycImage: string | null,
+    public kycStatus: string | null,
     public _id?: string 
   ) {}
 }

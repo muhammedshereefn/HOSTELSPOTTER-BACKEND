@@ -6,12 +6,23 @@ import { SignInUseCase } from '../../application/use-cases/user/SignInUseCase';
 import { UserRepository } from '../../infrastructure/repositories/UserRepository';
 import { NodemailerService } from '../../infrastructure/mail/NodemailerService';
 import { GetAllUsersUseCase } from '../../application/use-cases/user/GetAllUsersUseCase';
+import { GetAllPropertiesUseCase } from '../../application/use-cases/property/GetAllPropertiesUseCase';
+
+
 
 import jwt from 'jsonwebtoken';
 import { User } from '../../domain/entities/User';
+import { PropertyRepository } from '../../infrastructure/repositories/PropertyRepository';
+import { GetPropertyByIdUseCase } from '../../application/use-cases/property/GetPropertyByIdUseCase';
 
 const userRepository = new UserRepository();
+const propertyRepository = new PropertyRepository()
 const mailService = new NodemailerService();
+
+
+const getAllPropertiesUseCase = new GetAllPropertiesUseCase(propertyRepository);
+const getPropertyByIdUseCase = new GetPropertyByIdUseCase(propertyRepository);
+
 
 export class UserController {
   static async signUp(req: Request, res: Response) {
@@ -167,6 +178,31 @@ export class UserController {
   }
 
 
+  static async getAllProperties(req: Request, res: Response) {
+    try {
+        const properties = await getAllPropertiesUseCase.execute();
+        res.status(200).json(properties);
+    } catch (error) {
+        console.error('Error getting all properties:', error);
+        res.status(500).json({ message: 'An unknown error occurred while fetching properties' });
+    }
+}
 
+
+static async getPropertybyId(req:Request , res:Response){
+  const {id} = req.params;
+
+  try {
+    const property = await getPropertyByIdUseCase.execute(id);
+    if(!property){
+      return res.status(404).json({ message: 'Property not found' });
+    }
+    res.status(200).json(property);
+
+  } catch (error) {
+    console.error('Error fetching property by ID:', error);
+    res.status(500).json({ message: 'An unknown error occurred while fetching the property' });
+  }
+}
 
 }

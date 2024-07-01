@@ -27,7 +27,7 @@ export class SignUpUseCase {
     const hashedPassword = await bcrypt.hash(password,10);
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    const vendor = new Vendor(name,email,hashedPassword,contact,otp,new Date(),false,false);
+    const vendor = new Vendor(name,email,hashedPassword,contact,otp,new Date(),false,false,null,'pending');
     await this.vendorRepository.createVendor(vendor);
     await this.mailService.sendOtp(email,otp);
 

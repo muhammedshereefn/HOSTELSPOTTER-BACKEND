@@ -9,9 +9,12 @@ import { DeleteUserUseCase } from "../../application/use-cases/admin/DeleteUserU
 import { VendorRepository } from "../../infrastructure/repositories/VendorRepository";
 import { BlockVendorUseCase } from "../../application/use-cases/admin/BlockVendorUseCase";
 import { UnblockVendorUseCase } from "../../application/use-cases/admin/UnblockVendorUseCase";
+import { PropertyRepository } from "../../infrastructure/repositories/PropertyRepository";
+import { GetPropervatiesByVendorUseCase } from "../../application/use-cases/admin/GetPropertiesByVendorUseCase";
 const adminRepository = new AdminRepository();
 const userRepository = new UserRepository();
 const vendorRepository = new VendorRepository();
+const propertyRepository = new PropertyRepository(); 
 export class AdminContrller {
     static async signUp(req:Request,res:Response) {
         const { name,email,password } = req.body;
@@ -102,6 +105,32 @@ export class AdminContrller {
         }
       }
 
+      static async approveKYC(req: Request, res: Response){
+        const {vendorId} = req.params;
 
+        try {
+            await vendorRepository.updateKycStatus(vendorId,'success');
+            res.status(200).json({message:'KYC approved successfully'})
+        } catch (error) {
+            console.error('Error approving KYC:', error);
+            res.status(500).json({ message: 'Internal server error' });
+        }
+      }
+
+
+      static async getPropertiesByVendor(req: Request, res: Response) {
+        const { vendorId } = req.params;
+        console.log('vendorid:',vendorId);
+        
+
+        try {
+            const getPropertiesByVendorUseCase = new GetPropervatiesByVendorUseCase(propertyRepository);
+            const properties = await getPropertiesByVendorUseCase.execute(vendorId);
+            res.status(200).json(properties);
+        } catch (error) {
+            console.error('Error fetching properties:', error);
+            res.status(500).json({ message: 'Internal server error' });
+        }
+    }
 
 }

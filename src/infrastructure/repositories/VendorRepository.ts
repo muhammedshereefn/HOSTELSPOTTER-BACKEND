@@ -14,7 +14,7 @@ export class VendorRepository implements IVendorRepository {
     const vendor = await VendorModel.findOne({ email }).lean();
     if (!vendor) return null;
 
-    return new Vendor(vendor.name, vendor.email, vendor.password, vendor.contact, vendor.otp ?? null, vendor.otpCreatedAt ?? null, vendor.isVerified,vendor.isBlocked,vendor._id.toString());
+    return new Vendor(vendor.name, vendor.email, vendor.password, vendor.contact, vendor.otp ?? null, vendor.otpCreatedAt ?? null, vendor.isVerified,vendor.isBlocked,vendor.kycImage ?? null,vendor.kycStatus ?? null,vendor._id.toString());
   }
 
   async updateVendor(vendor: Vendor): Promise<void> {
@@ -23,7 +23,7 @@ export class VendorRepository implements IVendorRepository {
 
   async getAllVendors():Promise<Vendor[]>{
     const vendors = await VendorModel.find().lean();
-    return vendors.map(vendor => new Vendor(vendor.name, vendor.email, vendor.password, vendor.contact, vendor.otp ?? null, vendor.otpCreatedAt ?? null, vendor.isVerified,vendor.isBlocked,vendor._id.toString()));
+    return vendors.map(vendor => new Vendor(vendor.name, vendor.email, vendor.password, vendor.contact, vendor.otp ?? null, vendor.otpCreatedAt ?? null, vendor.isVerified,vendor.isBlocked,vendor.kycImage ?? null, vendor.kycStatus ?? null,vendor._id.toString()));
     
   }
 
@@ -31,7 +31,7 @@ export class VendorRepository implements IVendorRepository {
     const vendor = await VendorModel.findById(id).lean();
 
     if(!vendor) return null
-    return new Vendor(vendor.name,vendor.email,vendor.password,vendor.contact,vendor.otp?? null , vendor.otpCreatedAt ?? null, vendor.isVerified,vendor.isBlocked)
+    return new Vendor(vendor.name,vendor.email,vendor.password,vendor.contact,vendor.otp?? null , vendor.otpCreatedAt ?? null, vendor.isVerified,vendor.isBlocked,vendor.kycImage ?? null,vendor.kycStatus ??null,vendor._id.toString())
   }
 
    async blockVendor(vendorId: string): Promise<void> {
@@ -41,4 +41,19 @@ export class VendorRepository implements IVendorRepository {
    async unblockVendor(vendorId: string): Promise<void> {
     await VendorModel.updateOne({_id:vendorId},{isBlocked:false});   
   }
+
+  async updateKycInfo(vendorId: string, kycImage: string): Promise<void> {
+    await VendorModel.updateOne({ _id: vendorId }, { kycImage, kycStatus: 'pending' });
+  }
+
+  async updateKycStatus(vendorId:string,kycStatus:string):Promise<void>{
+    await VendorModel.updateOne({_id:vendorId},{kycStatus})
+  }
+
+
+
+
+  
+  
+  
 }

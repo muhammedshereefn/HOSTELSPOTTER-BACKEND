@@ -5,18 +5,36 @@ import { SignUpUseCase } from '../../application/use-cases/vendor/SignUpUseCase'
 import { SignInUseCase } from '../../application/use-cases/vendor/SignInUseCase';
 import { VendorRepository } from '../../infrastructure/repositories/VendorRepository';
 import { NodemailerService } from '../../infrastructure/mail/NodemailerService';
+import { upload } from '../middlewares/multerMiddleware';
+import { Property } from '../../domain/entities/Property';
+import { CreatePropertyUseCase } from '../../application/use-cases/property/CreatePropertyUseCase';
+import { PropertyRepository } from '../../infrastructure/repositories/PropertyRepository';
+
 
 import jwt from 'jsonwebtoken';
 import { GetAllVendorsUseCase } from '../../application/use-cases/vendor/GetAllVendorsUseCase';
+import { UploadKycUseCase } from '../../application/use-cases/vendor/UploadKycUseCase';
+import { GetVendorByIdUseCase } from '../../application/use-cases/vendor/GetVendorByIdUseCase';
+import { UpdatePropertyUseCase } from '../../application/use-cases/property/UpdatePropertyUseCase';
+import { GetPropertyByIdUseCase } from '../../application/use-cases/property/GetPropertyByIdUseCase';
+
+
+
 
 const vendorRepository = new VendorRepository();
 const mailService = new NodemailerService();
 
+const getVendorByIdUseCase = new GetVendorByIdUseCase(vendorRepository);
+
+const propertyRepository = new PropertyRepository();
+const createPropertyUseCase = new CreatePropertyUseCase(propertyRepository);
+const updatePropertyUseCase = new UpdatePropertyUseCase(propertyRepository);
+const getPropertyByIdUseCase = new GetPropertyByIdUseCase(propertyRepository);
 
 
-const generateToken = (email: string): string => {
-  const secretKey = process.env.JWT_SECRET!; // Use a secure key and store it in environment variables
-  const token = jwt.sign({ email }, secretKey, { expiresIn: '1h' }); // Token valid for 1 hour
+const generateToken = (email: string, vendorId: string): string => {
+  const secretKey = process.env.JWT_SECRET!; 
+  const token = jwt.sign({ email, vendorId }, secretKey, { expiresIn: '1h' }); 
   return token;
 };
 
@@ -77,7 +95,9 @@ export class VendorController {
 
       await vendorRepository.updateVendor(vendor);
 
-      const token = generateToken(vendor.email);
+      const vendorId = vendor._id ? vendor._id.toString() : '';
+      const token = generateToken(vendor.email,vendorId);
+      
       res.status(200).json({ token, message: 'Email verified successfully' });
       // res.status(200).send('Email verified successfully');
     } catch (error) {
@@ -142,10 +162,147 @@ export class VendorController {
         return res.status(404).json({ message: 'Vendor not found' });
       }
   
-      res.status(200).json({ isBlocked: vendor.isBlocked });
+      res.status(200).json({ isBlocked: vendor.isBlocked ,kycStatus: vendor.kycStatus,kycImage: vendor.kycImage});
     } catch (error) {
       return res.status(500).json({ message: 'An unknown error occurred' });
     }
   }
 
+  static async uploadKyc(req: Request, res: Response) {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded' });
+    }
+  
+    const { vendorId } = req.body;
+    const kycImage = req.file.path.replace(/\\/g, '/');
+  
+    try {
+      if (!vendorId) {
+        return res.status(400).json({ message: 'Vendor ID is required' });
+      }
+  
+      const uploadKycUseCase = new UploadKycUseCase(vendorRepository);
+      await uploadKycUseCase.execute(vendorId, kycImage);
+  
+      res.status(200).send('KYC document uploaded successfully');
+    } catch (error) {
+      console.error('Error uploading KYC document:', error);
+      res.status(500).json({ message: 'An unknown error occurred' });
+    }
+  }
+
+
+  static async getVendorById(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const vendor = await getVendorByIdUseCase.execute(id);
+      if (!vendor) {
+        return res.status(404).json({ message: 'Vendor not found' });
+      }
+      res.status(200).json(vendor);
+    } catch (error) {
+      console.error('Error getting vendor by ID:', error);
+      res.status(500).json({ message: 'Server error', error });
+    }
+  }
+  
+
+  static async createProperty(req: Request, res: Response) {
+
+    const { hostelName, hostelLocation, ownerName, ownerEmail, ownerContact, rent, deposite, target, policies, facilities, category, availablePlans, nearbyAccess, roomQuantity, hostelImages } = req.body;
+    const vendorId = req.body.vendorId;
+
+
+    const property = new Property({
+        hostelName,
+        hostelLocation,
+        ownerName,
+        ownerEmail,
+        ownerContact,
+        rent,
+        deposite,
+        target: target ? target.split(',').map((item: string) => item.trim()) : [],
+        policies: policies ? policies.split(',').map((item: string) => item.trim()) : [],
+        facilities: facilities ? facilities.split(',').map((item: string) => item.trim()) : [],
+        category,
+        availablePlans: availablePlans ? availablePlans.split(',').map((item: string) => item.trim()) : [],
+        nearbyAccess: nearbyAccess ? nearbyAccess.split(',').map((item: string) => item.trim()) : [],
+        roomQuantity,
+        hostelImages,
+        vendorId,
+    });
+
+    try {
+        await createPropertyUseCase.execute(property);
+        res.status(201).json({ message: 'Property created successfully' });
+    } catch (error) {
+        console.error('Error during property creation:', error);
+        res.status(500).json({ message: 'An error occurred while creating the property' });
+    }
+  }
+
+
+  static async listProperties(req:Request, res:Response){
+    try {
+      const vendorId = req.body.vendorId;
+      const properties = await propertyRepository.findPropertiesByVendorId(vendorId);
+
+      res.status(200).json(properties);
+    } catch (error) {
+      console.error('Error getting properties:',error)
+      res.status(500).json({ message: 'An error occurred while fetching properties' });
+
+    }
+  }
+  
+  
+  static async deleteProperty(req: Request, res: Response){
+    const { id } = req.params;
+    console.log("id",id);
+
+    try {
+      await propertyRepository.deleteProperty(id);
+      res.status(200).json({ message: 'Property deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting property:', error);
+        res.status(500).json({ message: 'An error occurred while deleting property' });
+    }
+    
+  }
+
+  static async updateProperty(req: Request, res: Response) {
+    console.log('inside this route')
+    const { id } = req.params;
+    console.log(req.body,'.....................................');
+    
+    const propertyData = req.body;
+
+    console.log()
+
+    try {
+      await updatePropertyUseCase.execute(id, propertyData);
+      res.status(200).json({ message: 'Property updated successfully' });
+    } catch (error) {
+      console.error('Error updating property:', error);
+      res.status(500).json({ message: 'An error occurred while updating the property' });
+    }
+  }
+
+
+  static async getPropertyById(req: Request, res: Response) {
+    const { id } = req.params;
+    try {
+      const property = await getPropertyByIdUseCase.execute(id);
+      if (!property) {
+        return res.status(404).json({ message: 'Property not found' });
+      }
+      res.status(200).json(property);
+    } catch (error) {
+      console.error('Error getting property by ID:', error);
+      res.status(500).json({ message: 'An unknown error occurred' });
+    }
+  }
+  
+
 }
+

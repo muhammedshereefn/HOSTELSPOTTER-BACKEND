@@ -14,6 +14,7 @@ router.post('/verify-otp', UserController.verifyOtp);
 router.post('/resend-otp', UserController.resendOtp);
 router.get('/all', UserController.getAllUsers);
 router.get('/check-block-status', CheckUserBlockStatusMiddleware,UserController.checkBlockStatus)
-
+router.get('/properties', UserController.getAllProperties);
+router.get('/properties/:id',UserController.getPropertybyId)
 
 export default router;

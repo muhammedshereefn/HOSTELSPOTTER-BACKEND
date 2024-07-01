@@ -5,7 +5,7 @@ import vendorRoutes from './presentation/routes/VendorRoutes';
 import adminRoutes from './presentation/routes/AdminRoutes'
 import dotenv from 'dotenv';
 import cors from 'cors';
-
+import path from 'path';
 
 dotenv.config();
 
@@ -17,11 +17,14 @@ if (!MONGO_URI) {
   throw new Error('MONGO_URI environment variable is not defined');
 }
 
+
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
 app.use(cors({
   origin: 'http://localhost:5173', 
   credentials: true,
 }));
-app.use(express.json());
+app.use(express.json()); 
 app.use('/api/users', userRoutes);
 app.use('/api/vendors', vendorRoutes);
 app.use('/api',adminRoutes);
@@ -34,4 +37,7 @@ mongoose.connect(MONGO_URI)
   .catch((error: any) => console.log(error));
 
   
+  
+  
+
   

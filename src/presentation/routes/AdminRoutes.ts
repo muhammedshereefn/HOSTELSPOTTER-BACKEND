@@ -11,5 +11,7 @@ router.delete("/admin/deleteUser/:userId", AdminContrller.deleteUser);
 
 router.put('/admin/blockVendor/:vendorId',AdminContrller.blockVendor)
 router.put('/admin/unblockVendor/:vendorId',AdminContrller.unblockVendor)
+router.put('/admin/approveKYC/:vendorId',AdminContrller.approveKYC)
+router.get('/admin/:vendorId/properties',AdminContrller.getPropertiesByVendor)
 
 export default router;
