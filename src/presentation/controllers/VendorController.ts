@@ -1,6 +1,6 @@
 // src/presentation/controllers/VendorController.ts
 
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { SignUpUseCase } from '../../application/use-cases/vendor/SignUpUseCase';
 import { SignInUseCase } from '../../application/use-cases/vendor/SignInUseCase';
 import { VendorRepository } from '../../infrastructure/repositories/VendorRepository';
@@ -10,6 +10,7 @@ import { Property } from '../../domain/entities/Property';
 import { CreatePropertyUseCase } from '../../application/use-cases/property/CreatePropertyUseCase';
 import { PropertyRepository } from '../../infrastructure/repositories/PropertyRepository';
 
+import { errorHandler } from '../middlewares/errorMiddleware';
 
 import jwt from 'jsonwebtoken';
 import { GetAllVendorsUseCase } from '../../application/use-cases/vendor/GetAllVendorsUseCase';
@@ -17,6 +18,7 @@ import { UploadKycUseCase } from '../../application/use-cases/vendor/UploadKycUs
 import { GetVendorByIdUseCase } from '../../application/use-cases/vendor/GetVendorByIdUseCase';
 import { UpdatePropertyUseCase } from '../../application/use-cases/property/UpdatePropertyUseCase';
 import { GetPropertyByIdUseCase } from '../../application/use-cases/property/GetPropertyByIdUseCase';
+import { AppError } from '../../errors/AppError';
 
 
 
@@ -39,7 +41,7 @@ const generateToken = (email: string, vendorId: string): string => {
 };
 
 export class VendorController {
-  static async signUp(req: Request, res: Response) {
+  static async signUp(req: Request, res: Response, next: NextFunction) {
     const { name, email, password, contact } = req.body;
 
     try {
@@ -47,14 +49,13 @@ export class VendorController {
       await signUpUseCase.execute(name, email, password, contact);
       res.status(201).send('Vendor registered successfully, please verify your email');
     } catch (error) {
-      if (error instanceof Error && error.message === 'Vendor already exists') {
-        return res.status(400).json({ message: 'Vendor already exists' });
-      }
-      return res.status(500).json({ message: 'An unknown error occurred' });
+      next(error);
     }
   }
 
-  static async signIn(req: Request, res: Response) {
+
+
+  static async signIn(req: Request, res: Response,next: NextFunction) {
     const { email, password } = req.body;
 
     try {
@@ -63,22 +64,18 @@ export class VendorController {
       res.status(200).json({ token });
       console.log("successfully logged in");
     } catch (error) {
-      if (error instanceof Error) {
-        res.status(400).send(error.message);
-      } else {
-        res.status(400).send('An unknown error occurred');
-      }
+      next(error);
     }
   }
 
-  static async verifyOtp(req: Request, res: Response) {
+  static async verifyOtp(req: Request, res: Response,next: NextFunction) {
     console.log('verifyOtp called with:', req.body);
     const { email, otp } = req.body;
 
     try {
       const vendor = await vendorRepository.findVendorByEmail(email);
       if (!vendor || vendor.otp !== otp) {
-        throw new Error('Invalid OTP');
+        throw new AppError('Invalid OTP', 400);
       }
 
       const currentTime = new Date().getTime();
@@ -86,7 +83,7 @@ export class VendorController {
       const timeDifference = currentTime - otpTime;
 
       if (timeDifference > 5 * 60 * 1000) { // 5 minutes
-        throw new Error('OTP expired');
+        throw new AppError('OTP expired', 400);
       }
 
       vendor.isVerified = true;
@@ -99,25 +96,18 @@ export class VendorController {
       const token = generateToken(vendor.email,vendorId);
       
       res.status(200).json({ token, message: 'Email verified successfully' });
-      // res.status(200).send('Email verified successfully');
     } catch (error) {
-      if (error instanceof Error) {
-        res.status(400).send(error.message);
-      } else {
-        res.status(400).send('An unknown error occurred');
-      }
+      next(error);
     }
   }
 
-  static async resendOtp(req: Request, res: Response) {
-    console.log('resendOtp called with:', req.body);
+  static async resendOtp(req: Request, res: Response,next: NextFunction) {
     const { email } = req.body;
 
     try {
       const vendor = await vendorRepository.findVendorByEmail(email);
       if (!vendor) {
-        throw new Error('Vendor not found');
-      }
+        throw new AppError('Vendor not found', 404);      }
 
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       vendor.otp = otp;
@@ -128,26 +118,21 @@ export class VendorController {
 
       res.status(200).send('OTP resent successfully');
     } catch (error) {
-      if (error instanceof Error) {
-        res.status(400).send(error.message);
-      } else {
-        res.status(400).send('An unknown error occurred');
-      }
+      next(error);
     }
   }
 
 
-  static async getAllVendors(req:Request,res:Response){
+  static async getAllVendors(req:Request,res:Response,next: NextFunction){
     try {
       const getAllVendorsUseCase = new GetAllVendorsUseCase(vendorRepository);
       const vendors = await getAllVendorsUseCase.execute();
       res.status(200).json(vendors);
     } catch (error) {
-      res.status(500).json({message:"An unknown error occured"})
-    }
+      next(error);    }
   }
 
-  static async checkBlockStatus(req: Request, res: Response) {
+  static async checkBlockStatus(req: Request, res: Response,next: NextFunction) {
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
       return res.status(401).json({ message: 'Unauthorized' });
@@ -164,11 +149,11 @@ export class VendorController {
   
       res.status(200).json({ isBlocked: vendor.isBlocked ,kycStatus: vendor.kycStatus,kycImage: vendor.kycImage});
     } catch (error) {
-      return res.status(500).json({ message: 'An unknown error occurred' });
-    }
+      next(error);
+        }
   }
 
-  static async uploadKyc(req: Request, res: Response) {
+  static async uploadKyc(req: Request, res: Response,next: NextFunction) {
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded' });
     }
@@ -186,13 +171,12 @@ export class VendorController {
   
       res.status(200).send('KYC document uploaded successfully');
     } catch (error) {
-      console.error('Error uploading KYC document:', error);
-      res.status(500).json({ message: 'An unknown error occurred' });
+      next(error);
     }
   }
 
 
-  static async getVendorById(req: Request, res: Response) {
+  static async getVendorById(req: Request, res: Response,next: NextFunction) {
     try {
       const { id } = req.params;
       const vendor = await getVendorByIdUseCase.execute(id);
@@ -201,13 +185,12 @@ export class VendorController {
       }
       res.status(200).json(vendor);
     } catch (error) {
-      console.error('Error getting vendor by ID:', error);
-      res.status(500).json({ message: 'Server error', error });
+      next(error);
     }
   }
   
 
-  static async createProperty(req: Request, res: Response) {
+  static async createProperty(req: Request, res: Response,next: NextFunction) {
 
     const { hostelName, hostelLocation, ownerName, ownerEmail, ownerContact, rent, deposite, target, policies, facilities, category, availablePlans, nearbyAccess, roomQuantity, hostelImages } = req.body;
     const vendorId = req.body.vendorId;
@@ -236,41 +219,37 @@ export class VendorController {
         await createPropertyUseCase.execute(property);
         res.status(201).json({ message: 'Property created successfully' });
     } catch (error) {
-        console.error('Error during property creation:', error);
-        res.status(500).json({ message: 'An error occurred while creating the property' });
+      next(error);
     }
   }
 
 
-  static async listProperties(req:Request, res:Response){
+  static async listProperties(req:Request, res:Response,next: NextFunction){
     try {
       const vendorId = req.body.vendorId;
       const properties = await propertyRepository.findPropertiesByVendorId(vendorId);
 
       res.status(200).json(properties);
     } catch (error) {
-      console.error('Error getting properties:',error)
-      res.status(500).json({ message: 'An error occurred while fetching properties' });
+      next(error);
 
     }
   }
   
   
-  static async deleteProperty(req: Request, res: Response){
+  static async deleteProperty(req: Request, res: Response,next: NextFunction){
     const { id } = req.params;
-    console.log("id",id);
 
     try {
       await propertyRepository.deleteProperty(id);
       res.status(200).json({ message: 'Property deleted successfully' });
     } catch (error) {
-      console.error('Error deleting property:', error);
-        res.status(500).json({ message: 'An error occurred while deleting property' });
+      next(error);
     }
     
   }
 
-  static async updateProperty(req: Request, res: Response) {
+  static async updateProperty(req: Request, res: Response, next: NextFunction) {
     console.log('inside this route')
     const { id } = req.params;
     console.log(req.body,'.....................................');
@@ -283,13 +262,12 @@ export class VendorController {
       await updatePropertyUseCase.execute(id, propertyData);
       res.status(200).json({ message: 'Property updated successfully' });
     } catch (error) {
-      console.error('Error updating property:', error);
-      res.status(500).json({ message: 'An error occurred while updating the property' });
+      next(error);
     }
   }
 
 
-  static async getPropertyById(req: Request, res: Response) {
+  static async getPropertyById(req: Request, res: Response , next: NextFunction) {
     const { id } = req.params;
     try {
       const property = await getPropertyByIdUseCase.execute(id);
@@ -298,11 +276,13 @@ export class VendorController {
       }
       res.status(200).json(property);
     } catch (error) {
-      console.error('Error getting property by ID:', error);
-      res.status(500).json({ message: 'An unknown error occurred' });
+      next(error);
     }
   }
   
 
 }
 
+
+
+export { errorHandler };

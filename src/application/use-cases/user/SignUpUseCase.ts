@@ -3,6 +3,7 @@ import { IUserRepository } from '../../../domain/repositories/IUserRepository';
 import { NodemailerService } from '../../../infrastructure/mail/NodemailerService';
 import { User } from '../../../domain/entities/User';
 import bcrypt from 'bcrypt';
+import { AppError } from '../../../errors/AppError';
 
 export class SignUpUseCase {
   constructor(
@@ -12,17 +13,16 @@ export class SignUpUseCase {
 
   async execute(name: string, email: string, password: string, contact: string): Promise<void> {
     if (!password) {
-      throw new Error('Password is required');
+      throw new AppError('Password is required',400);
     }
 
     const existingUser = await this.userRepository.findUserByEmail(email);
     if(existingUser){
-      throw new Error("User alredy exists");
+      throw new AppError("User already exists", 409);
     }
 
     if (typeof password !== 'string') {
-      throw new Error('Password must be a string');
-    }
+      throw new AppError('Password must be a string', 400);    }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const otp = Math.floor(100000 + Math.random() * 900000).toString();

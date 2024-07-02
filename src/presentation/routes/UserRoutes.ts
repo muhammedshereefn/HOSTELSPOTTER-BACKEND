@@ -17,4 +17,5 @@ router.get('/check-block-status', CheckUserBlockStatusMiddleware,UserController.
 router.get('/properties', UserController.getAllProperties);
 router.get('/properties/:id',UserController.getPropertybyId)
 
+
 export default router;

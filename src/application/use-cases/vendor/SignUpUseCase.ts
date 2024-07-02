@@ -2,6 +2,7 @@ import { IVendorRepository } from "../../../domain/repositories/IVendorRepositor
 import { NodemailerService } from "../../../infrastructure/mail/NodemailerService";
 import { Vendor } from "../../../domain/entities/Vendor";
 import bcrypt from 'bcrypt'
+import { AppError } from "../../../errors/AppError";
 
 export class SignUpUseCase {
   constructor(
@@ -11,17 +12,18 @@ export class SignUpUseCase {
 
 
   async execute(name:string , email:string,password:string, contact:string): Promise<void> {
+    
     if(!password){
-      throw new Error("password is required");
+      throw new AppError("Password is required", 400);
     }
 
     const existingVendor = await this.vendorRepository.findVendorByEmail(email);
     if(existingVendor){
-      throw new Error("vendor alredy exists");
+      throw new AppError("Vendor already exists", 409);
     }
 
     if(typeof password !== 'string'){
-      throw new Error("password must be a string")
+      throw new AppError("Password must be a string", 400);
     }
 
     const hashedPassword = await bcrypt.hash(password,10);

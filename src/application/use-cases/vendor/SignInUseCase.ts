@@ -3,24 +3,24 @@
 import { IVendorRepository } from '../../../domain/repositories/IVendorRepository';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { AppError } from '../../../errors/AppError';
 
 export class SignInUseCase {
   constructor(private vendorRepository: IVendorRepository) {}
 
   async execute(email: string, password: string): Promise<string> {
     const vendor = await this.vendorRepository.findVendorByEmail(email);
-    console.log(vendor, "[][][][][][][");
 
     if (!vendor || !await bcrypt.compare(password, vendor.password)) {
-      throw new Error('Invalid credentials');
+      throw new AppError('Invalid credentials', 401);
     }
 
     if (!vendor.isVerified) {
-      throw new Error('Email not verified');
+      throw new AppError('Email not verified', 403);
     }
 
     const token = jwt.sign(
-      { email: vendor.email, vendorId: vendor._id!.toString() }, // Non-null assertion here
+      { email: vendor.email, vendorId: vendor._id!.toString() }, 
       process.env.JWT_SECRET!,
       { expiresIn: '1h' }
     );

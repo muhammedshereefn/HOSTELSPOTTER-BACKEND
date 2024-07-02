@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import userRoutes from './presentation/routes/UserRoutes';
 import vendorRoutes from './presentation/routes/VendorRoutes';
 import adminRoutes from './presentation/routes/AdminRoutes'
+import { errorHandler } from './presentation/middlewares/errorMiddleware';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import path from 'path';
@@ -28,6 +29,8 @@ app.use(express.json());
 app.use('/api/users', userRoutes);
 app.use('/api/vendors', vendorRoutes);
 app.use('/api',adminRoutes);
+
+app.use(errorHandler);
 
 mongoose.connect(MONGO_URI)
   .then(() => {

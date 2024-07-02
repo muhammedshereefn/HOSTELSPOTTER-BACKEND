@@ -1,6 +1,6 @@
 
 
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { SignUpUseCase } from '../../application/use-cases/user/SignUpUseCase';
 import { SignInUseCase } from '../../application/use-cases/user/SignInUseCase';
 import { UserRepository } from '../../infrastructure/repositories/UserRepository';
@@ -14,6 +14,7 @@ import jwt from 'jsonwebtoken';
 import { User } from '../../domain/entities/User';
 import { PropertyRepository } from '../../infrastructure/repositories/PropertyRepository';
 import { GetPropertyByIdUseCase } from '../../application/use-cases/property/GetPropertyByIdUseCase';
+import { AppError } from '../../errors/AppError';
 
 const userRepository = new UserRepository();
 const propertyRepository = new PropertyRepository()
@@ -25,7 +26,7 @@ const getPropertyByIdUseCase = new GetPropertyByIdUseCase(propertyRepository);
 
 
 export class UserController {
-  static async signUp(req: Request, res: Response) {
+  static async signUp(req: Request, res: Response,next: NextFunction) {
     const { name, email, password, contact } = req.body;
 
     try {
@@ -35,39 +36,31 @@ export class UserController {
       await signUpUseCase.execute(name, email, password, contact);
       res.status(201).send('User registered successfully, please verify your email');
     } catch (error) {
-      if (error instanceof Error && error.message === 'User already exists') {
-        return res.status(400).json({ message: 'User already exists' });
-      }
-      return res.status(500).json({ message: 'An unknown error occurred' });
+     
+      next(error)
     }
   }
 
 
 
-  static async signIn(req: Request, res: Response) {
+  static async signIn(req: Request, res: Response,next: NextFunction ) {
     const { email, password } = req.body;
 
     try {
 
       const user = await userRepository.findUserByEmail(email);
       if(!user){
-        return res.status(400).json({message:"Invalid email or password"})
+        throw new AppError("Invalid email or password", 400);
       }
 
-      // if(user.isBlocked){
-      //   res.status(400).json({message:'User is blocked'});
-      // }
+
 
       const signInUseCase = new SignInUseCase(userRepository);
       const token = await signInUseCase.execute(email, password);
       res.status(200).json({ token });
       console.log("successfully logged in");
     } catch (error) {
-      if (error instanceof Error) {
-        res.status(400).send(error.message);
-      } else {
-        res.status(400).send('An unknown error occurred');
-      }
+      next(error)
     }
   }
 
@@ -76,14 +69,14 @@ export class UserController {
 
 
 
-  static async verifyOtp(req: Request, res: Response) {
+  static async verifyOtp(req: Request, res: Response, next: NextFunction) {
     console.log('verifyOtp called with:', req.body);
     const { email, otp } = req.body;
 
     try {
       const user = await userRepository.findUserByEmail(email);
       if (!user || user.otp !== otp) {
-        throw new Error('Invalid OTP');
+        throw new AppError('Invalid OTP', 400);
       }
 
       const currentTime = new Date().getTime();
@@ -91,12 +84,12 @@ export class UserController {
       const timeDifference = currentTime - otpTime;
 
       if (timeDifference > 60000) { // 1 minute in milliseconds
-        throw new Error('OTP expired');
+        throw new AppError('OTP expired', 400);
       }
 
       user.isVerified = true;
       user.otp = null;
-      user.otpCreatedAt = null; // Clear the otpCreatedAt field
+      user.otpCreatedAt = null; 
       await userRepository.updateUser(user);
 
       const token = jwt.sign({ email: user.email }, process.env.JWT_SECRET!, {
@@ -105,21 +98,17 @@ export class UserController {
 
       res.status(200).json({ message: 'Email verified successfully', token });
     } catch (error) {
-      if (error instanceof Error) {
-        res.status(400).json({ message: error.message });
-      } else {
-        res.status(400).json({ message: 'An unknown error occurred' });
-      }
+      next(error);
     }
   }
 
-  static async resendOtp(req: Request, res: Response) {
+  static async resendOtp(req: Request, res: Response , next: NextFunction) {
     const { email } = req.body;
 
     try {
       const user = await userRepository.findUserByEmail(email);
       if (!user) {
-        throw new Error('User not found');
+        throw new AppError('User not found', 404);
       }
 
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
@@ -130,32 +119,28 @@ export class UserController {
 
       res.status(200).json({ message: 'OTP resent successfully', otpExpiresAt: new Date(user.otpCreatedAt.getTime() + 60000) });
     } catch (error) {
-      if (error instanceof Error) {
-        res.status(400).json({ message: error.message });
-      } else {
-        res.status(400).json({ message: 'An unknown error occurred' });
-      }
+      next(error);
     }
   }
 
 
-  static async getAllUsers(req: Request, res: Response) {
+  static async getAllUsers(req: Request, res: Response,next: NextFunction) {
     try {
       const getAllUsersUseCase = new GetAllUsersUseCase(userRepository);
       const users = await getAllUsersUseCase.execute();
       res.status(200).json(users);
     } catch (error) {
-      res.status(500).json({ message: 'An unknown error occurred' });
+      next(error);
     }
   }
 
 
 
-  static async checkBlockStatus(req: Request, res: Response) {
+  static async checkBlockStatus(req: Request, res: Response,next: NextFunction) {
     const token = req.headers.authorization?.split(' ')[1];
 
     if (!token) {
-      return res.status(401).send('Unauthorized');
+      return next(new AppError('Unauthorized', 401));
     }
 
     try {
@@ -164,44 +149,42 @@ export class UserController {
 
       const user = await userRepository.findUserByEmail(userEmail);
       if (!user) {
-        return res.status(404).send('User not found');
+        return next(new AppError('User not found', 404));
       }
 
       if (user.isBlocked) {
-        return res.status(403).send('User is blocked');
+        return next(new AppError('User is blocked', 403));
       }
 
       res.status(200).send('User is not blocked');
     } catch (error) {
-      return res.status(401).send('Invalid token');
+      next(new AppError('Invalid token', 401));
     }
   }
 
 
-  static async getAllProperties(req: Request, res: Response) {
+  static async getAllProperties(req: Request, res: Response, next: NextFunction) {
     try {
         const properties = await getAllPropertiesUseCase.execute();
         res.status(200).json(properties);
     } catch (error) {
-        console.error('Error getting all properties:', error);
-        res.status(500).json({ message: 'An unknown error occurred while fetching properties' });
+      next(error);
     }
 }
 
 
-static async getPropertybyId(req:Request , res:Response){
+static async getPropertybyId(req:Request , res:Response, next: NextFunction){
   const {id} = req.params;
 
   try {
     const property = await getPropertyByIdUseCase.execute(id);
     if(!property){
-      return res.status(404).json({ message: 'Property not found' });
+      return next(new AppError('Property not found', 404));
     }
     res.status(200).json(property);
 
   } catch (error) {
-    console.error('Error fetching property by ID:', error);
-    res.status(500).json({ message: 'An unknown error occurred while fetching the property' });
+    next(error);
   }
 }
 
