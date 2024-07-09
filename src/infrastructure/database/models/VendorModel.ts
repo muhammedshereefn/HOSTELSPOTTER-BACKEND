@@ -12,7 +12,9 @@ const vendorSchema = new mongoose.Schema({
   isVerified: { type: Boolean, required: true, default: false },
   isBlocked: {type:Boolean,required:true,default:false},
   kycImage: { type: String, required: false },
-  kycStatus: { type: String, required: false, default: 'pending' }
+  kycStatus: { type: String, required: false, default: 'pending' },
+  getPremium: { type: Boolean, required: true, default: false },
+  payed :{ type: Boolean, required: true, default: false },
 });
 
 export const VendorModel = mongoose.model('Vendor', vendorSchema);

@@ -12,6 +12,8 @@ export class Vendor {
     public isBlocked: boolean,
     public kycImage: string | null,
     public kycStatus: string | null,
+    public getPremium: boolean = false,
+    public payed: boolean = false,
     public _id?: string 
   ) {}
 }

@@ -13,6 +13,7 @@ const vendorRouter = express.Router();
 vendorRouter.post('/signup', VendorController.signUp);
 vendorRouter.post('/signin',CheckVendorBlockedMiddleware, VendorController.signIn);
 vendorRouter.post('/verify-otp', VendorController.verifyOtp);
+vendorRouter.post('/refresh-token', VendorController.refreshToken);
 vendorRouter.post('/resend-otp', VendorController.resendOtp); 
 vendorRouter.get('/all',VendorController.getAllVendors)
 vendorRouter.get('/check-block-status', CheckVendorBlockStatusMiddleware, VendorController.checkBlockStatus);
@@ -24,6 +25,13 @@ vendorRouter.delete('/property/:id',tokenVerify,VendorController.deleteProperty)
 
 vendorRouter.put('/property/:id', tokenVerify, VendorController.updateProperty);
 vendorRouter.get('/property/:id', tokenVerify, VendorController.getPropertyById);
+
+vendorRouter.post('/subscribe',tokenVerify,VendorController.createSubscriptionOrder)
+vendorRouter.post('/verify-subscription', tokenVerify, VendorController.verifySubscription);
+
+
+vendorRouter.post('/pay',tokenVerify,VendorController.createPropertyOrder)
+vendorRouter.post('/verify-payment', tokenVerify, VendorController.verifyPropertyPayment);
 
 
 vendorRouter.get('/:id', VendorController.getVendorById);

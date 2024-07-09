@@ -11,10 +11,14 @@ import { BlockVendorUseCase } from "../../application/use-cases/admin/BlockVendo
 import { UnblockVendorUseCase } from "../../application/use-cases/admin/UnblockVendorUseCase";
 import { PropertyRepository } from "../../infrastructure/repositories/PropertyRepository";
 import { GetPropervatiesByVendorUseCase } from "../../application/use-cases/admin/GetPropertiesByVendorUseCase";
+import { NodemailerService } from "../../infrastructure/mail/NodemailerService";
 const adminRepository = new AdminRepository();
 const userRepository = new UserRepository();
 const vendorRepository = new VendorRepository();
-const propertyRepository = new PropertyRepository(); 
+const propertyRepository = new PropertyRepository();
+
+const nodemailerService = new NodemailerService();
+
 export class AdminContrller {
     static async signUp(req:Request,res:Response) {
         const { name,email,password } = req.body;
@@ -108,8 +112,15 @@ export class AdminContrller {
       static async approveKYC(req: Request, res: Response){
         const {vendorId} = req.params;
 
+
         try {
             await vendorRepository.updateKycStatus(vendorId,'success');
+            const vendor = await vendorRepository.findVendorById(vendorId);
+            console.log(vendor?.email,'---------------------');
+            if(vendor && vendor.email){
+                await nodemailerService.sendApprovalEmail(vendor.email);
+            }
+            
             res.status(200).json({message:'KYC approved successfully'})
         } catch (error) {
             console.error('Error approving KYC:', error);

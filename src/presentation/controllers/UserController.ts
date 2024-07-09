@@ -15,6 +15,7 @@ import { User } from '../../domain/entities/User';
 import { PropertyRepository } from '../../infrastructure/repositories/PropertyRepository';
 import { GetPropertyByIdUseCase } from '../../application/use-cases/property/GetPropertyByIdUseCase';
 import { AppError } from '../../errors/AppError';
+import { RefreshTokenUseCase } from '../../application/use-cases/user/RefreshTokenUseCase';
 
 const userRepository = new UserRepository();
 const propertyRepository = new PropertyRepository()
@@ -56,14 +57,28 @@ export class UserController {
 
 
       const signInUseCase = new SignInUseCase(userRepository);
-      const token = await signInUseCase.execute(email, password);
-      res.status(200).json({ token });
+      const {accessToken,refreshToken} = await signInUseCase.execute(email, password);
+      res.status(200).json({ accessToken,refreshToken });
       console.log("successfully logged in");
     } catch (error) {
       next(error)
     }
   }
 
+
+
+
+  static async refreshToken(req: Request, res: Response, next: NextFunction) {
+    const { refreshToken } = req.body;
+  
+    try {
+      const refreshTokenUseCase = new RefreshTokenUseCase(userRepository);
+      const tokens = await refreshTokenUseCase.execute(refreshToken);
+      res.status(200).json(tokens);
+    } catch (error) {
+      next(error);
+    }
+  }
   
 
 

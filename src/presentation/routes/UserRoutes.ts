@@ -10,12 +10,13 @@ const router = Router();
 
 router.post('/signup', UserController.signUp);
 router.post('/signin',CheckUserBlockedMiddleware ,UserController.signIn);
+router.post('/refresh-token', UserController.refreshToken);
 router.post('/verify-otp', UserController.verifyOtp);
 router.post('/resend-otp', UserController.resendOtp);
 router.get('/all', UserController.getAllUsers);
 router.get('/check-block-status', CheckUserBlockStatusMiddleware,UserController.checkBlockStatus)
 router.get('/properties', UserController.getAllProperties);
-router.get('/properties/:id',UserController.getPropertybyId)
+router.get('/properties/:id',UserController.getPropertybyId);
 
 
 export default router;

@@ -20,6 +20,8 @@ import { UpdatePropertyUseCase } from '../../application/use-cases/property/Upda
 import { GetPropertyByIdUseCase } from '../../application/use-cases/property/GetPropertyByIdUseCase';
 import { AppError } from '../../errors/AppError';
 
+import { createOrder,verifyPaymentSignature } from '../../infrastructure/payment/RazorpayService';
+import { RefreshTokenUseCase } from '../../application/use-cases/vendor/RefreshTokenUseCase';
 
 
 
@@ -34,11 +36,12 @@ const updatePropertyUseCase = new UpdatePropertyUseCase(propertyRepository);
 const getPropertyByIdUseCase = new GetPropertyByIdUseCase(propertyRepository);
 
 
-const generateToken = (email: string, vendorId: string): string => {
-  const secretKey = process.env.JWT_SECRET!; 
-  const token = jwt.sign({ email, vendorId }, secretKey, { expiresIn: '1h' }); 
-  return token;
+const generateTokens = (email: string, vendorId: string) => {
+  const accessToken = jwt.sign({ email, vendorId }, process.env.JWT_SECRET!, { expiresIn: '1h' });
+  const refreshToken = jwt.sign({ email, vendorId }, process.env.JWT_REFRESH_SECRET!, { expiresIn: '7d' });
+  return { accessToken, refreshToken };
 };
+
 
 export class VendorController {
   static async signUp(req: Request, res: Response, next: NextFunction) {
@@ -60,14 +63,28 @@ export class VendorController {
 
     try {
       const signInUseCase = new SignInUseCase(vendorRepository);
-      const token = await signInUseCase.execute(email, password);
-      res.status(200).json({ token });
+      const { accessToken, refreshToken } = await signInUseCase.execute(email, password);
+      res.status(200).json({ accessToken, refreshToken });
       console.log("successfully logged in");
     } catch (error) {
       next(error);
     }
   }
 
+
+  static async refreshToken(req: Request, res: Response, next: NextFunction) {
+    const { refreshToken } = req.body;
+
+    try {
+      const refreshTokenUseCase = new RefreshTokenUseCase(vendorRepository);
+      const tokens = await refreshTokenUseCase.execute(refreshToken);
+      res.status(200).json(tokens);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  
   static async verifyOtp(req: Request, res: Response,next: NextFunction) {
     console.log('verifyOtp called with:', req.body);
     const { email, otp } = req.body;
@@ -93,9 +110,9 @@ export class VendorController {
       await vendorRepository.updateVendor(vendor);
 
       const vendorId = vendor._id ? vendor._id.toString() : '';
-      const token = generateToken(vendor.email,vendorId);
+      const { accessToken, refreshToken } = generateTokens(vendor.email, vendorId);
       
-      res.status(200).json({ token, message: 'Email verified successfully' });
+      res.status(200).json({ accessToken, refreshToken, message: 'Email verified successfully' });
     } catch (error) {
       next(error);
     }
@@ -147,7 +164,7 @@ export class VendorController {
         return res.status(404).json({ message: 'Vendor not found' });
       }
   
-      res.status(200).json({ isBlocked: vendor.isBlocked ,kycStatus: vendor.kycStatus,kycImage: vendor.kycImage});
+      res.status(200).json({ isBlocked: vendor.isBlocked ,kycStatus: vendor.kycStatus,kycImage: vendor.kycImage, getPremium: vendor.getPremium,payed:vendor.payed});
     } catch (error) {
       next(error);
         }
@@ -279,6 +296,84 @@ export class VendorController {
       next(error);
     }
   }
+
+
+
+  //Rzorpay
+  static async createSubscriptionOrder(req:Request,res:Response,next:NextFunction){
+    try {
+      const order = await createOrder(129,'INR');
+      res.status(201).json({orderId:order.id,amount:order.amount,currency:order.currency});
+    } catch (error) {
+      next(error);
+    }
+  }
+
+
+  static async verifySubscription(req: Request, res: Response, next: NextFunction) {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body; 
+    const vendorId = req.body.vendorId;
+
+    try {
+        const isValidSignature = verifyPaymentSignature(razorpay_order_id, razorpay_payment_id, razorpay_signature);
+        if (!isValidSignature) {
+            throw new AppError('Invalid payment signature', 400);
+        }
+
+       
+        const vendor = await vendorRepository.findVendorById(vendorId);
+        if (!vendor) {
+            throw new AppError('Vendor not found', 404);
+        }
+
+        vendor.getPremium = true;
+        await vendorRepository.updateVendor(vendor);
+
+        res.status(200).json({ message: 'Subscription successful' });
+    } catch (error) {
+        next(error);
+    }
+}
+
+
+
+
+//propertypayment
+ static async createPropertyOrder(req: Request, res: Response, next: NextFunction){
+  try {
+    const order = await createOrder(49,'INR');
+    res.status(201).json({orderId: order.id, amount: order.amount, currency: order.currency })
+  } catch (error) {
+    next(error);
+  }
+ }
+
+
+
+ static async verifyPropertyPayment(req: Request, res: Response, next: NextFunction) {
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+  const vendorId = req.body.vendorId;
+
+  try {
+    const isValidSignature = verifyPaymentSignature(razorpay_order_id, razorpay_payment_id, razorpay_signature);
+      if (!isValidSignature) {
+        throw new AppError('Invalid payment signature', 400);
+      }
+
+      // Update vendor's payed status
+      const vendor = await vendorRepository.findVendorById(vendorId);
+      if (!vendor) {
+        throw new AppError('Vendor not found', 404);
+      }
+
+      vendor.payed = true;
+      await vendorRepository.updateVendor(vendor);
+
+      res.status(200).json({ message: 'Payment successful' });
+  } catch (error) {
+    
+  }
+ }
   
 
 }

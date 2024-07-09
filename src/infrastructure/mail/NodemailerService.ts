@@ -34,4 +34,21 @@ export class NodemailerService {
     }
   }
   
+
+  async sendApprovalEmail(email: string): Promise<void> {
+    try {
+      const mailOptions = {
+        from: process.env.EMAIL,
+        to: email,
+        subject: 'KYC Approval',
+        text: 'Congratulations! Your KYC has been approved successfully.'
+      };
+
+      await this.transporter.sendMail(mailOptions);
+      console.log('Approval email sent successfully to:', email);
+    } catch (error) {
+      console.error('Error sending approval email:', error);
+      throw new Error('Failed to send approval email');
+    }
+  }
 }
