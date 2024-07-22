@@ -1,4 +1,7 @@
 import { Request, Response } from "express";
+
+
+
 import { AdminSignUpUseCase } from "../../application/use-cases/admin/AdminSignUpUseCase";
 import { AdminSignInUseCase } from "../../application/use-cases/admin/AdminSignInUseCase";
 import { AdminRepository } from "../../infrastructure/repositories/AdminRepository";
@@ -12,10 +15,14 @@ import { UnblockVendorUseCase } from "../../application/use-cases/admin/UnblockV
 import { PropertyRepository } from "../../infrastructure/repositories/PropertyRepository";
 import { GetPropervatiesByVendorUseCase } from "../../application/use-cases/admin/GetPropertiesByVendorUseCase";
 import { NodemailerService } from "../../infrastructure/mail/NodemailerService";
+import { GetDashboardCountsUseCase } from "../../application/use-cases/admin/GetDashboardCountsUseCase";
+import { RevenueRepository } from "../../infrastructure/repositories/RevenueRepository"; // Import RevenueRepository
+
 const adminRepository = new AdminRepository();
 const userRepository = new UserRepository();
 const vendorRepository = new VendorRepository();
 const propertyRepository = new PropertyRepository();
+const revenueRepository = new RevenueRepository();
 
 const nodemailerService = new NodemailerService();
 
@@ -143,5 +150,22 @@ export class AdminContrller {
             res.status(500).json({ message: 'Internal server error' });
         }
     }
+
+    static async getDashboardCounts(req: Request, res: Response) {
+        try {
+          const getDashboardCountsUseCase = new GetDashboardCountsUseCase(
+            userRepository,
+            vendorRepository,
+            propertyRepository,
+            revenueRepository
+          );
+          const counts = await getDashboardCountsUseCase.execute();
+          console.log(counts,'====');
+          
+          res.status(200).json(counts);
+        } catch (error) {
+          res.status(400).json({ message: 'Error fetching dashboard counts' });
+        }
+      }
 
 }

@@ -10,6 +10,9 @@ export interface IUserRepository {
     blockUser(userId: string): Promise<void>;
     unblockUser(userId: string): Promise<void>;
     deleteUser(userId:string):Promise<void>;
+    addBookingHistoryByEmail(email: string, bookingDetails: any): Promise<void>;
+    getUserBookingHistory(userEmail: string): Promise<any[]>;
+    countUsers(): Promise<number>;
   }
 
   

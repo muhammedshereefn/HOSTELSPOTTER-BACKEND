@@ -9,7 +9,8 @@ import { upload } from '../middlewares/multerMiddleware';
 import { Property } from '../../domain/entities/Property';
 import { CreatePropertyUseCase } from '../../application/use-cases/property/CreatePropertyUseCase';
 import { PropertyRepository } from '../../infrastructure/repositories/PropertyRepository';
-
+import { UserModel } from '../../infrastructure/database/models/UserModel';
+import { RevenueModel } from '../../infrastructure/database/models/RevenueModel';
 import { errorHandler } from '../middlewares/errorMiddleware';
 
 import jwt from 'jsonwebtoken';
@@ -22,10 +23,13 @@ import { AppError } from '../../errors/AppError';
 
 import { createOrder,verifyPaymentSignature } from '../../infrastructure/payment/RazorpayService';
 import { RefreshTokenUseCase } from '../../application/use-cases/vendor/RefreshTokenUseCase';
+import { RevenueRepository } from '../../infrastructure/repositories/RevenueRepository';
+import { Revenue } from '../../domain/entities/Revenue';
 
 
 
 const vendorRepository = new VendorRepository();
+const revenueRepository = new RevenueRepository();
 const mailService = new NodemailerService();
 
 const getVendorByIdUseCase = new GetVendorByIdUseCase(vendorRepository);
@@ -207,34 +211,71 @@ export class VendorController {
   }
   
 
-  static async createProperty(req: Request, res: Response,next: NextFunction) {
+  static async createProperty(req: Request, res: Response, next: NextFunction) {
+    const {
+      hostelName,
+      hostelLocation,
+      state,
+      district,
+      city,
 
-    const { hostelName, hostelLocation, ownerName, ownerEmail, ownerContact, rent, deposite, target, policies, facilities, category, availablePlans, nearbyAccess, roomQuantity, hostelImages } = req.body;
+      ownerName,
+      ownerEmail,
+      ownerContact,
+      rent,
+      deposite,
+      target,
+      policies,
+      facilities,
+      category,
+      availablePlans,
+      nearbyAccess,
+      roomQuantity,
+      hostelImages,
+      roomBedQuantities,
+      longitude, 
+      latitude   
+    } = req.body;
+  
     const vendorId = req.body.vendorId;
-
-
+    console.log(vendorId,"[][][][][][][][][]+++++++++++++____________");
+    
+  
+    // Ensure roomBedQuantities is parsed correctly
+    const parsedRoomBedQuantities = roomBedQuantities.map((item: any) => ({
+      roomName: item.roomName,
+      bedQuantity: Number(item.bedQuantity) 
+    }));
+  
     const property = new Property({
-        hostelName,
-        hostelLocation,
-        ownerName,
-        ownerEmail,
-        ownerContact,
-        rent,
-        deposite,
-        target: target ? target.split(',').map((item: string) => item.trim()) : [],
-        policies: policies ? policies.split(',').map((item: string) => item.trim()) : [],
-        facilities: facilities ? facilities.split(',').map((item: string) => item.trim()) : [],
-        category,
-        availablePlans: availablePlans ? availablePlans.split(',').map((item: string) => item.trim()) : [],
-        nearbyAccess: nearbyAccess ? nearbyAccess.split(',').map((item: string) => item.trim()) : [],
-        roomQuantity,
-        hostelImages,
-        vendorId,
-    });
+      hostelName,
+      hostelLocation,
+      state,
+      district,
+      city,
 
+      ownerName,
+      ownerEmail,
+      ownerContact,
+      rent,
+      deposite,
+      target: target ? target.split(',').map((item: string) => item.trim()) : [],
+      policies: policies ? policies.split(',').map((item: string) => item.trim()) : [],
+      facilities: facilities ? facilities.split(',').map((item: string) => item.trim()) : [],
+      category,
+      availablePlans: availablePlans ? availablePlans.split(',').map((item: string) => item.trim()) : [],
+      nearbyAccess: nearbyAccess ? nearbyAccess.split(',').map((item: string) => item.trim()) : [],
+      roomQuantity,
+      hostelImages,
+      roomBedQuantities: parsedRoomBedQuantities, 
+      vendorId,
+      longitude, 
+      latitude   
+    });
+  
     try {
-        await createPropertyUseCase.execute(property);
-        res.status(201).json({ message: 'Property created successfully' });
+      await createPropertyUseCase.execute(property);
+      res.status(201).json({ message: 'Property created successfully' });
     } catch (error) {
       next(error);
     }
@@ -329,6 +370,10 @@ export class VendorController {
         vendor.getPremium = true;
         await vendorRepository.updateVendor(vendor);
 
+        const revenue = new Revenue(129,'subscription');
+        await revenueRepository.createRevenue(revenue);
+
+
         res.status(200).json({ message: 'Subscription successful' });
     } catch (error) {
         next(error);
@@ -366,14 +411,73 @@ export class VendorController {
         throw new AppError('Vendor not found', 404);
       }
 
-      vendor.payed = true;
+      
       await vendorRepository.updateVendor(vendor);
+
+      const revenue = new Revenue(49, 'property');
+      await revenueRepository.createRevenue(revenue);
 
       res.status(200).json({ message: 'Payment successful' });
   } catch (error) {
     
   }
  }
+
+
+ static async getPropertyBookings(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { hostelName } = req.params;
+
+
+    const users = await UserModel.find(
+      { 'bookingHistory.hostelName': hostelName },
+      { name: 1, contact: 1, bookingHistory: 1 }
+    ).lean(); //get plain JavaScript objects : lean()
+
+    // Flatten the booking histories for the specified hostel
+    const bookings = users.flatMap(user =>
+      user.bookingHistory
+        .filter(booking => booking.hostelName === hostelName)
+        .map(booking => ({
+          name: user.name,
+          contact: user.contact,
+          roomName: booking.roomName,
+          bedQuantity: booking.bedQuantity,
+          bookedAt: booking.bookedAt,
+        }))
+    );
+
+    res.status(200).json(bookings);
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+static async getVendorProfile(req: Request, res: Response, next: NextFunction) {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ message: 'Unauthorized' });
+  }
+
+  try {
+    const decoded: any = jwt.verify(token, process.env.JWT_SECRET!);
+    const email = decoded.email;
+
+    const vendor = await vendorRepository.findVendorByEmail(email);
+    if (!vendor) {
+      return res.status(404).json({ message: 'Vendor not found' });
+    }
+
+    res.status(200).json({
+      vendorname: vendor.name,
+      email: vendor.email,
+      contact: vendor.contact,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
   
 
 }

@@ -6,6 +6,10 @@ import { User } from '../../domain/entities/User';
 import { UserModel } from '../database/models/UserModel';
 
 export class UserRepository implements IUserRepository {
+
+
+
+
   async createUser(user: User): Promise<void> {
     const userModel = new UserModel(user);
     await userModel.save();
@@ -15,7 +19,7 @@ export class UserRepository implements IUserRepository {
     const user = await UserModel.findOne({ email }).lean();
     if (!user) return null;
 
-    return new User(user.name, user.email, user.password, user.contact, user.otp ?? null, user.otpCreatedAt ?? null, user.isVerified,user.isBlocked);
+    return new User(user.name, user.email, user.password, user.contact, user.otp ?? null, user.otpCreatedAt ?? null, user.isVerified,user.isBlocked,user.bookingHistory,user.wallet,);
   }
 
   async updateUser(user: User): Promise<void> {
@@ -25,7 +29,7 @@ export class UserRepository implements IUserRepository {
 
   async getAllUsers(): Promise<User[]> {
     const users = await UserModel.find().lean();
-    return users.map(user => new User(user.name, user.email, user.password, user.contact, user.otp ?? null, user.otpCreatedAt ?? null, user.isVerified,user.isBlocked,user._id.toString()));
+    return users.map(user => new User(user.name, user.email, user.password, user.contact, user.otp ?? null, user.otpCreatedAt ?? null, user.isVerified,user.isBlocked,user.bookingHistory,user.wallet,user._id.toString()));
   }
   
 
@@ -35,7 +39,7 @@ async findUserById(id: string): Promise<User | null> {
   const user = await UserModel.findById(id).lean();
   if (!user) return null;
 
-  return new User(user.name, user.email, user.password, user.contact, user.otp ?? null, user.otpCreatedAt ?? null, user.isVerified, user.isBlocked);
+  return new User(user.name, user.email, user.password, user.contact, user.otp ?? null, user.otpCreatedAt ?? null, user.isVerified, user.isBlocked,user.bookingHistory,user.wallet,);
 }
 
 async blockUser(userId: string): Promise<void> {
@@ -49,5 +53,34 @@ async unblockUser(userId:string): Promise<void>{
 async deleteUser(userId:string):Promise<void>{
   await UserModel.findByIdAndDelete(userId);
 }
+
+async addBookingHistoryByEmail(email: string, bookingDetails: any): Promise<void> {
+  await UserModel.updateOne(
+    { email: email },
+    { $push: { bookingHistory: bookingDetails } }
+  );
+}
+
+
+async getUserBookingHistory(userEmail: string): Promise<any[]> {
+  const user = await UserModel.findOne({ email: userEmail }).lean();
+  if (!user) {
+    throw new Error('User not found');
+  }
+  return user.bookingHistory.map(booking => ({
+    ...booking,
+    id: booking._id ? booking._id.toString() : null, 
+  }));
+}
+
+
+async getUserBookingHistoryById(userId: string): Promise<any[]> {
+  const user = await UserModel.findById(userId).select('bookingHistory').lean();
+  return user ? user.bookingHistory : [];
+}
+
+ async countUsers(): Promise<number> {
+    return UserModel.countDocuments();
+  }
   
 }

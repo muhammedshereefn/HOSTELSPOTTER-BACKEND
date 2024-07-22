@@ -13,4 +13,6 @@ export interface IVendorRepository {
   unblockVendor(vendorId:string):Promise<void>;
   updateKycInfo(vendorId: string, kycImage: string): Promise<void>;
   updateKycStatus(vendorId: string, kycStatus: string): Promise<void>;
+  countVendors(): Promise<number>;
+  countPremiumVendors(): Promise<number>;
 }

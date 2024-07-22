@@ -7,5 +7,8 @@ export interface IPropertyRepository {
     findAllProperties(): Promise<Property[]>;
     findPropertyById(id: string): Promise<Property | null>;
     updateProperty(id: string, propertyData: Partial<Property>): Promise<void>;
+    countProperties(): Promise<number>;
+    findPropertiesGroupedByState(): Promise<any>;
+    findBookingCountsByState(): Promise<any[]>;
 
   }

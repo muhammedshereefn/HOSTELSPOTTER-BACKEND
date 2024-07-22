@@ -29,10 +29,12 @@ vendorRouter.get('/property/:id', tokenVerify, VendorController.getPropertyById)
 vendorRouter.post('/subscribe',tokenVerify,VendorController.createSubscriptionOrder)
 vendorRouter.post('/verify-subscription', tokenVerify, VendorController.verifySubscription);
 
+vendorRouter.get('/profile', tokenVerify, VendorController.getVendorProfile);
 
 vendorRouter.post('/pay',tokenVerify,VendorController.createPropertyOrder)
 vendorRouter.post('/verify-payment', tokenVerify, VendorController.verifyPropertyPayment);
 
+vendorRouter.get('/property/:hostelName/bookings', tokenVerify, VendorController.getPropertyBookings);
 
 vendorRouter.get('/:id', VendorController.getVendorById);
 

@@ -5,6 +5,9 @@ import mongoose from 'mongoose';
 const propertySchema = new mongoose.Schema({
   hostelName: { type: String, required: true },
   hostelLocation: { type: String, required: true },
+  state: { type: String, required: true },
+  district: { type: String, required: true },
+  city: { type: String, required: true },
   ownerName: { type: String, required: true },
   ownerEmail: { type: String, required: true },
   ownerContact: { type: String, required: true },
@@ -19,7 +22,16 @@ const propertySchema = new mongoose.Schema({
   roomQuantity: { type: Number, required: true },
   vendorId: { type:mongoose.Schema.Types.ObjectId, ref:'Vendor' ,required:true},
   hostelImages: { type: [String], required: true },
-});
+  roomBedQuantities: [
+    {
+      roomName: { type: String, required: true },
+      bedQuantity: { type: Number, required: true },
+    },
+  ],
+  longitude: { type: Number, required: true }, 
+  latitude: { type: Number, required: true }, 
+  bookingCount: { type: Number, default: 0 },
+},{ timestamps: true });
 
 export const PropertyModel = mongoose.model('Property', propertySchema);
- 
+  

@@ -52,8 +52,12 @@ export class VendorRepository implements IVendorRepository {
 
 
 
-
+  async countVendors(): Promise<number> {
+    return VendorModel.countDocuments();
+  }
   
-  
+  async countPremiumVendors(): Promise<number> {
+    return await VendorModel.countDocuments({ getPremium: true });
+  }
   
 }

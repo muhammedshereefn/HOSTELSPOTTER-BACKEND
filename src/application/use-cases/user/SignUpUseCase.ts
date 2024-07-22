@@ -27,7 +27,7 @@ export class SignUpUseCase {
     const hashedPassword = await bcrypt.hash(password, 10);
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    const user = new User(name, email, hashedPassword, contact, otp, new Date(), false,false);
+    const user = new User(name, email, hashedPassword, contact, otp, new Date(), false,false,[],{ balance: 0, history: [] });
     await this.userRepository.createUser(user);
     await this.mailService.sendOtp(email, otp);
   }
