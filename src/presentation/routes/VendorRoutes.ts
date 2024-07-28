@@ -36,6 +36,9 @@ vendorRouter.post('/verify-payment', tokenVerify, VendorController.verifyPropert
 
 vendorRouter.get('/property/:hostelName/bookings', tokenVerify, VendorController.getPropertyBookings);
 
+vendorRouter.get('/vendorId', tokenVerify, VendorController.getVendorId);
+
+
 vendorRouter.get('/:id', VendorController.getVendorById);
 
 

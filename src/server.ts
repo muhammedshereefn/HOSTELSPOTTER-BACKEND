@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import userRoutes from './presentation/routes/UserRoutes';
 import vendorRoutes from './presentation/routes/VendorRoutes';
 import adminRoutes from './presentation/routes/AdminRoutes';
+import chatRoutes from './presentation/routes/ChatRoutes';
 import { errorHandler } from './presentation/middlewares/errorMiddleware';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -41,6 +42,9 @@ app.use(express.json());
 app.use('/api/users', userRoutes);
 app.use('/api/vendors', vendorRoutes);
 app.use('/api', adminRoutes);
+app.use('/api/chats', chatRoutes);
+
+
 
 app.use(errorHandler);
 
@@ -55,6 +59,20 @@ mongoose.connect(MONGO_URI)
 // Socket.IO connection handling
 io.on('connection', (socket) => {
   console.log('A user connected');
+
+
+  socket.on('send-message', (data) => {
+    const { userId, vendorId, text } = data;
+    io.to(`vendor-${vendorId}`).emit('message', { senderId: userId, text });
+    io.to(`user-${userId}`).emit('message', { senderId: vendorId, text });
+  });
+
+  socket.on('join-chat', (data) => {
+    const { userId, vendorId } = data;
+    socket.join(`user-${userId}`);
+    socket.join(`vendor-${vendorId}`);
+  });
+
 
   socket.on('disconnect', () => {
     console.log('User disconnected');

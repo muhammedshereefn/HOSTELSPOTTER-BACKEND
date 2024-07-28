@@ -308,13 +308,10 @@ export class VendorController {
   }
 
   static async updateProperty(req: Request, res: Response, next: NextFunction) {
-    console.log('inside this route')
     const { id } = req.params;
-    console.log(req.body,'.....................................');
     
     const propertyData = req.body;
 
-    console.log()
 
     try {
       await updatePropertyUseCase.execute(id, propertyData);
@@ -370,7 +367,7 @@ export class VendorController {
         vendor.getPremium = true;
         await vendorRepository.updateVendor(vendor);
 
-        const revenue = new Revenue(129,'subscription');
+        const revenue = new Revenue(129,'subscription',vendor.name);
         await revenueRepository.createRevenue(revenue);
 
 
@@ -414,7 +411,7 @@ export class VendorController {
       
       await vendorRepository.updateVendor(vendor);
 
-      const revenue = new Revenue(49, 'property');
+      const revenue = new Revenue(49, 'property',vendor.name);
       await revenueRepository.createRevenue(revenue);
 
       res.status(200).json({ message: 'Payment successful' });
@@ -474,6 +471,15 @@ static async getVendorProfile(req: Request, res: Response, next: NextFunction) {
       email: vendor.email,
       contact: vendor.contact,
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+static async getVendorId(req: Request, res: Response, next: NextFunction) {
+  try {
+    const vendorId = req.body.vendorId; 
+    res.status(200).json({ vendorId });
   } catch (error) {
     next(error);
   }

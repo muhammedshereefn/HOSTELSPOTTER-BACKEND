@@ -154,6 +154,23 @@ export class UserController {
 
 
 
+  static async getUserId(req: Request, res: Response, next: NextFunction) {
+    const userEmail = req.body.userEmail;  
+    
+    try {
+      const user = await userRepository.findUserByEmail(userEmail);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+      res.json({ id: user._id });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+
+
+
   static async getUserBookingHistory(req: Request, res: Response, next: NextFunction) {
     const { userId } = req.params;
 
@@ -410,6 +427,7 @@ static async cancelBooking(req: Request, res: Response, next: NextFunction) {
       amount: refundAmount,
       transactionType: 'Refund',
       transactionDate: new Date(),
+      hostelName: booking.hostelName,
     });
 
     // Remove booking from history

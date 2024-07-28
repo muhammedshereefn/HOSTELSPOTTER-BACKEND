@@ -14,6 +14,7 @@ router.put('/admin/unblockVendor/:vendorId',AdminContrller.unblockVendor)
 router.put('/admin/approveKYC/:vendorId',AdminContrller.approveKYC)
 router.get('/admin/:vendorId/properties',AdminContrller.getPropertiesByVendor)
 router.get('/admin/dashboard-counts', AdminContrller.getDashboardCounts);
+router.get('/admin/revenues', AdminContrller.getAllRevenues);
 
 
 export default router;

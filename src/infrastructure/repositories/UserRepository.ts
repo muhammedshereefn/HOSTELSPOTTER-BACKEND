@@ -19,7 +19,7 @@ export class UserRepository implements IUserRepository {
     const user = await UserModel.findOne({ email }).lean();
     if (!user) return null;
 
-    return new User(user.name, user.email, user.password, user.contact, user.otp ?? null, user.otpCreatedAt ?? null, user.isVerified,user.isBlocked,user.bookingHistory,user.wallet,);
+    return new User(user.name, user.email, user.password, user.contact, user.otp ?? null, user.otpCreatedAt ?? null, user.isVerified,user.isBlocked,user.bookingHistory,user.wallet,user._id.toString());
   }
 
   async updateUser(user: User): Promise<void> {

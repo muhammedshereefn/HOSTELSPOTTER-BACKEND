@@ -17,6 +17,7 @@ import { GetPropervatiesByVendorUseCase } from "../../application/use-cases/admi
 import { NodemailerService } from "../../infrastructure/mail/NodemailerService";
 import { GetDashboardCountsUseCase } from "../../application/use-cases/admin/GetDashboardCountsUseCase";
 import { RevenueRepository } from "../../infrastructure/repositories/RevenueRepository"; // Import RevenueRepository
+import { GetAllRevenuesUseCase } from "../../application/use-cases/admin/GetAllRevenuesUseCase";
 
 const adminRepository = new AdminRepository();
 const userRepository = new UserRepository();
@@ -165,6 +166,18 @@ export class AdminContrller {
           res.status(200).json(counts);
         } catch (error) {
           res.status(400).json({ message: 'Error fetching dashboard counts' });
+        }
+      }
+
+      static async getAllRevenues(req: Request, res: Response) {
+        const { page = 1, limit = 10 } = req.query;
+    
+        try {
+          const getAllRevenuesUseCase = new GetAllRevenuesUseCase(revenueRepository);
+          const revenues = await getAllRevenuesUseCase.execute(Number(page), Number(limit));
+          res.status(200).json(revenues);
+        } catch (error) {
+          res.status(400).json({ message: 'Error fetching revenues' });
         }
       }
 

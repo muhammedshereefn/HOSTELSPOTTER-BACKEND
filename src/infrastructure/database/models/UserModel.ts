@@ -16,6 +16,7 @@ const walletHistorySchema = new mongoose.Schema({
   amount: { type: Number, required: true },
   transactionType: { type: String, required: true }, 
   transactionDate: { type: Date, required: true, default: Date.now },
+  hostelName: { type: String, required: true },
 });
 
 const walletSchema = new mongoose.Schema({

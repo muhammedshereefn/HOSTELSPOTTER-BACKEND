@@ -40,4 +40,23 @@ export class RevenueRepository implements IRevenueRepository {
 
     return result;
   }
+
+  async getAllRevenues(page: number, limit: number): Promise<{ revenues: Revenue[], totalCount: number }> {
+    const revenueDocs = await RevenueModel.find()
+      .skip((page - 1) * limit)
+      .limit(limit)
+      .exec();
+
+    const totalCount = await RevenueModel.countDocuments().exec();
+
+    const revenues = revenueDocs.map(doc => new Revenue(
+      doc.amount,
+      doc.type,
+      doc.vendorName,
+      doc.createdAt,
+      doc._id.toString()
+    ));
+
+    return { revenues, totalCount };
+  }
 }

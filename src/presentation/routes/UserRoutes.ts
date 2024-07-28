@@ -31,6 +31,9 @@ router.post('/verify-payment',userTokenVerify, UserController.verifySlotBookingP
 router.get('/booking-history',userTokenVerify, UserController.getBookingHistory);
 router.delete('/booking-history/:id', userTokenVerify, UserController.cancelBooking); 
 
+router.get('/user-id', userTokenVerify, UserController.getUserId);
+
+
 
 router.get('/profile', userTokenVerify, UserController.getUserProfile);
 
