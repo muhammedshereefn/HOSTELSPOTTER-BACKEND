@@ -6,7 +6,7 @@ import { ObjectId } from 'mongoose';
 
 export const sendMessage = async (req: Request, res: Response) => {
   try {
-    const { userId, vendorId, text } = req.body;
+    const { userId, vendorId, text,senderId } = req.body;
 
     const chat = await ChatModel.findOne({ userId, vendorId });
 
@@ -14,11 +14,11 @@ export const sendMessage = async (req: Request, res: Response) => {
       const newChat = new ChatModel({
         userId,
         vendorId,
-        messages: [{ senderId: userId, text, timestamp: new Date() }],
+        messages: [{ senderId, text, timestamp: new Date() }],
       });
       await newChat.save();
     } else {
-      chat.messages.push({ senderId: userId, text, timestamp: new Date() });
+      chat.messages.push({ senderId, text, timestamp: new Date() });
       await chat.save();
     }
 

@@ -1,6 +1,3 @@
-
-  
-
 import express from 'express';
 import mongoose from 'mongoose';
 import userRoutes from './presentation/routes/UserRoutes';
@@ -60,19 +57,18 @@ mongoose.connect(MONGO_URI)
 io.on('connection', (socket) => {
   console.log('A user connected');
 
-
   socket.on('send-message', (data) => {
-    const { userId, vendorId, text } = data;
-    io.to(`vendor-${vendorId}`).emit('message', { senderId: userId, text });
-    io.to(`user-${userId}`).emit('message', { senderId: vendorId, text });
+    const { userId, vendorId, text, senderId } = data;
+    const room = `chat-${userId}-${vendorId}`;
+    io.to(room).emit('message', { senderId, text });
   });
 
   socket.on('join-chat', (data) => {
     const { userId, vendorId } = data;
-    socket.join(`user-${userId}`);
-    socket.join(`vendor-${vendorId}`);
+  
+    const room = `chat-${userId}-${vendorId}`;
+    socket.join(room);
   });
-
 
   socket.on('disconnect', () => {
     console.log('User disconnected');

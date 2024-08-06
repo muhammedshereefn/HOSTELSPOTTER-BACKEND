@@ -1,5 +1,3 @@
-// src/infrastructure/database/models/RevenueModel.ts
-
 import mongoose from 'mongoose';
 
 const revenueSchema = new mongoose.Schema({

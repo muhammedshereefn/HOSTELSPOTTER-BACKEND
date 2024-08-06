@@ -1,4 +1,3 @@
-// src/infrastructure/database/models/UserModel.ts
 import mongoose from 'mongoose';
 
 

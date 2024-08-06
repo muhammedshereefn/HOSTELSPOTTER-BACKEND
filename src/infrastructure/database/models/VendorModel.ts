@@ -1,5 +1,3 @@
-// src/infrastructure/database/models/VendorModel.ts
-
 import mongoose from 'mongoose';
 
 const vendorSchema = new mongoose.Schema({
