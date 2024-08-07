@@ -23,7 +23,7 @@ const io = new Server(server, {
 });
 
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI;
+const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://shareef:shareef123@cluster0.2wuvnsx.mongodb.net/BROSTEL";
 
 if (!MONGO_URI) {
   throw new Error('MONGO_URI environment variable is not defined');
