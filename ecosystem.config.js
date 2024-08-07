@@ -5,8 +5,8 @@ module.exports = {
         script: 'ts-node',
         args: './src/server.ts',
         env: {
-          PORT: process.env.PORT,
-          MONGO_URI: process.env.MONGO_URI,
+          PORT: 5000,
+          MONGO_URI: "mongodb+srv://shareef:shareef123@cluster0.2wuvnsx.mongodb.net/BROSTEL",
           JWT_SECRET: process.env.JWT_SECRET,
           JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET,
           EMAIL: process.env.EMAIL,
