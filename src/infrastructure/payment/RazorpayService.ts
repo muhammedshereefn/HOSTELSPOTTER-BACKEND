@@ -3,8 +3,8 @@ import crypto from 'crypto';
 import { AppError } from '../../errors/AppError';
 
 const razorpayInstance = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID! || "rzp_test_Vz3Fdh1bVQWYj8",
-  key_secret: process.env.RAZORPAY_KEY_SECRET! || "iqh0x4CGZ2mHJ7CTgrgfvgCo",
+  key_id: process.env.RAZORPAY_KEY_ID!,
+  key_secret: process.env.RAZORPAY_KEY_SECRET!,
 });
 
 export const createOrder = async (amount: number, currency: string) => {
