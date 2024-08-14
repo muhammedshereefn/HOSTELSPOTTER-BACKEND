@@ -29,6 +29,8 @@ vendorRouter.delete('/property/:id',tokenVerify,VendorController.deleteProperty)
 vendorRouter.put('/property/:id', tokenVerify, VendorController.updateProperty);
 vendorRouter.get('/property/:id', tokenVerify, VendorController.getPropertyById);
 vendorRouter.get('/property/:hostelName/bookings', tokenVerify, VendorController.getPropertyBookings);
+vendorRouter.get('/bookings', tokenVerify, VendorController.getAllVendorBookings);
+
 
 //----------------Subscribe&Payments------------------------
 vendorRouter.post('/subscribe',tokenVerify,VendorController.createSubscriptionOrder)

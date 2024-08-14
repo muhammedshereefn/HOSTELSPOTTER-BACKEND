@@ -9,8 +9,9 @@ export class User {
     public otpCreatedAt: Date | null,
     public isVerified: boolean,
     public isBlocked: boolean,
-    public bookingHistory: Array<{ hostelName: string, hostelLocation: string, roomName: string, bedQuantity: number, bookedAt: Date }>,
+    public bookingHistory: Array<{ hostelName: string, hostelLocation: string, roomName: string, bedQuantity: number, bookedAt: Date,bookingDate: Date,status:string }>,
     public wallet: { balance: number, history: Array<{ amount: number, transactionType: string, transactionDate: Date, hostelName: string }> },
+    public favHostels: Array<{ propertyId: string, propertyName: string }> = [],
     public _id?: string 
 
   ) {}

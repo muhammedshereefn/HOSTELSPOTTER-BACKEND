@@ -23,6 +23,7 @@ export class PropertyRepository implements IPropertyRepository {
     async findPropertiesByVendorId(vendorId: string): Promise<Property[]> {
       return PropertyModel.find({ vendorId });
     }
+    
     async deleteProperty(id: string): Promise<void> {
       await PropertyModel.findByIdAndDelete(id);
   }

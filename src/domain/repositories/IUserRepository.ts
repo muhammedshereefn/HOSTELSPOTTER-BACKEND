@@ -13,6 +13,8 @@ export interface IUserRepository {
     addBookingHistoryByEmail(email: string, bookingDetails: any): Promise<void>;
     getUserBookingHistory(userEmail: string): Promise<any[]>;
     countUsers(): Promise<number>;
+    addFavoriteHostel(userId: string, propertyId: string, propertyName: string): Promise<void>;
+
   }
 
   

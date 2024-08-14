@@ -17,7 +17,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: 'https://hostelspotter-frontend.vercel.app',
+    origin: 'http://localhost:5173',
     methods: ['GET', 'POST' , 'PUT' , 'DELETE'],
   },
 });
@@ -31,7 +31,7 @@ if (!MONGO_URI) {
 
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use(cors({
-  origin: 'https://hostelspotter-frontend.vercel.app',
+  origin: 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   credentials: true,
 }));
@@ -65,7 +65,6 @@ io.on('connection', (socket) => {
 
   socket.on('join-chat', (data) => {
     const { userId, vendorId } = data;
-  
     const room = `chat-${userId}-${vendorId}`;
     socket.join(room);
   });

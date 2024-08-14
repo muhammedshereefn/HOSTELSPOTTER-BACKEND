@@ -17,6 +17,7 @@ import { AppError } from '../../errors/AppError';
 import { RefreshTokenUseCase } from '../../application/use-cases/user/RefreshTokenUseCase';
 import { createOrder, verifyPaymentSignature } from '../../infrastructure/payment/RazorpayService';
 import { GetUserBookingHistoryUseCase } from '../../application/use-cases/user/GetUserBookingHistoryUseCase';
+import { UserModel } from '../../infrastructure/database/models/UserModel';
 
 const userRepository = new UserRepository();
 const propertyRepository = new PropertyRepository()
@@ -214,7 +215,6 @@ export class UserController {
   static async getAllProperties(req: Request, res: Response, next: NextFunction) {
     try {
         const properties = await getAllPropertiesUseCase.execute();
-        console.log(properties);
         
         res.status(200).json(properties);
     } catch (error) {
@@ -276,7 +276,7 @@ static async createSlotBookingOrder(req: Request, res: Response, next: NextFunct
 
 
 static async verifySlotBookingPayment(req: Request, res: Response, next: NextFunction) {
-  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, roomType, selectedBeds,userEmail } = req.body;
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature, roomType, selectedBeds,userEmail,bookingDate  } = req.body;
 
   try {
     const isValidSignature = verifyPaymentSignature(razorpay_order_id, razorpay_payment_id, razorpay_signature);
@@ -295,8 +295,13 @@ static async verifySlotBookingPayment(req: Request, res: Response, next: NextFun
       throw new AppError('Room not found', 404);
     }
 
+    const bedQuantity = selectedBeds.length;
+    const incomePerBed = 1000; 
+    const totalIncome = bedQuantity * incomePerBed;
+
     room.bedQuantity -= selectedBeds.length;
     property.bookingCount += 1
+    property.generatedIncome += totalIncome
     await propertyRepository.updatePropertyQ(property);
 
 
@@ -314,6 +319,8 @@ static async verifySlotBookingPayment(req: Request, res: Response, next: NextFun
       roomName: roomType,
       bedQuantity: selectedBeds.length,
       bookedAt: new Date(),
+      bookingDate: bookingDate,
+      status:'Success'
     };
 
     await userRepository.addBookingHistoryByEmail(userEmail, bookingDetails);
@@ -331,8 +338,89 @@ static async verifySlotBookingPayment(req: Request, res: Response, next: NextFun
   }
 }
 
+
+
+
+static async payWithWallet(req: Request, res: Response, next: NextFunction) {
+  const { amount, propertyId, roomType, selectedBeds, bookingDate } = req.body;
+
+  try {
+    const userEmail = req.body.userEmail; 
+    const user = await userRepository.findUserByEmail(userEmail); 
+
+    if (!user) {
+      throw new AppError('User not found', 404);
+    }
+
+    if (user.wallet.balance < amount) {
+      throw new AppError('Insufficient wallet balance', 400);
+    }
+
+      // Update property details
+      const property = await propertyRepository.findPropertyById(propertyId);
+      if (!property) {
+        throw new AppError('Property not found', 404);
+      }
+
+      const propertyName = property.hostelName;
+
+    // Deduct amount from wallet
+    user.wallet.balance -= amount;
+    user.wallet.history.push({
+      amount,
+      transactionType: 'Debit',
+      hostelName: propertyName,
+      transactionDate: new Date()
+    });
+    await userRepository.updateUser(user);
+
+  
+
+    const room = property.roomBedQuantities.find((room: any) => room.roomName === roomType);
+    if (!room) {
+      throw new AppError('Room not found', 404);
+    }
+
+    const bedQuantity = selectedBeds.length;
+    const incomePerBed = 1000; 
+    const totalIncome = bedQuantity * incomePerBed;
+
+    room.bedQuantity -= selectedBeds.length;
+    property.bookingCount += 1;
+    property.generatedIncome += totalIncome;
+    await propertyRepository.updatePropertyQ(property);
+
+    // Update user's booking history
+    const bookingDetails = {
+      hostelName: property.hostelName,
+      hostelLocation: property.hostelLocation,
+      roomName: roomType,
+      bedQuantity: selectedBeds.length,
+      bookedAt: new Date(),
+      bookingDate: bookingDate,
+      status: 'Success'
+    };
+
+    await userRepository.addBookingHistoryByEmail(userEmail, bookingDetails);
+
+    // Emit booking notification to vendor
+    io.emit('newBooking', {
+      userName: user.name,
+      bedQuantity: selectedBeds.length,
+      hostelName: property.hostelName,
+    });
+
+    res.status(200).json({ message: 'Payment successful' });
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+
+
 static async getBookingHistory(req: Request, res: Response, next: NextFunction) {
-  const { userEmail } = req.body;  // Extract userEmail from req.body
+  const { userEmail } = req.body;  
 
   try {
     if (!userEmail) {
@@ -418,6 +506,10 @@ static async cancelBooking(req: Request, res: Response, next: NextFunction) {
     }
 
     room.bedQuantity += booking.bedQuantity;
+    const incomePerBed = 1000;
+    const decrementAmount = booking.bedQuantity * incomePerBed;
+    property.generatedIncome = Math.max(0, property.generatedIncome - decrementAmount);
+    property.bookingCount = Math.max(0, property.bookingCount - 1);
     await propertyRepository.updatePropertyQ(property);
 
     // Update user wallet
@@ -430,8 +522,9 @@ static async cancelBooking(req: Request, res: Response, next: NextFunction) {
       hostelName: booking.hostelName,
     });
 
-    // Remove booking from history
-    user.bookingHistory = user.bookingHistory.filter((b: any) => b._id.toString() !== bookingId);
+    booking.status = 'cancelled'
+
+    
     await userRepository.updateUser(user);
 
 
@@ -451,5 +544,97 @@ static async cancelBooking(req: Request, res: Response, next: NextFunction) {
 
 
 
+static async addFavoriteHostel(req: Request, res: Response, next: NextFunction) {
+  const { propertyId, propertyName, userEmail } = req.body;
+  
+  try {
+    const user = await userRepository.findUserByEmail(userEmail);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    
+    if (!user._id) {
+      return res.status(400).json({ message: 'User ID is not defined' });
+    }
+
+    try {
+      await userRepository.addFavoriteHostel(user._id, propertyId, propertyName);
+      res.status(200).json({ message: 'Property added to favorites' });
+    } catch (error) {
+      console.log("alredy added")
+    }
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+
+
+
+static async getFavoriteHostels(req: Request, res: Response, next: NextFunction) {
+  const { userEmail } = req.body;
+  
+  try {
+    // Find the user by email
+    const user = await userRepository.findUserByEmail(userEmail);
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    //  Extract the favorite hostel IDs
+    const favoriteHostelIds = user.favHostels;
+
+    const favoriteHostels = await Promise.all(
+      favoriteHostelIds.map(async (favorite) => {
+        const property = await propertyRepository.findPropertyById(favorite.propertyId);
+        if (property) {
+          return {
+            propertyId: favorite.propertyId,
+            hostelName: property.hostelName,
+            hostelLocation: property.hostelLocation,
+            hostelImage: property.hostelImages[0],
+          };
+        }
+        return null;
+      })
+    );
+
+    //  Filter out any null values (in case a property wasn't found)
+    const filteredHostels = favoriteHostels.filter(hostel => hostel !== null);
+
+    res.status(200).json(filteredHostels);
+  } catch (error) {
+    next(error);
+  }
+}
+
+static async removeFavoriteHostel(req: Request, res: Response, next: NextFunction) {
+  const { propertyId } = req.params;
+  const { userEmail } = req.body;
+
+  try {
+    const user = await userRepository.findUserByEmail(userEmail);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!user._id) {
+      return res.status(400).json({ message: 'User ID is not defined' });
+    }
+
+    try {
+      await userRepository.removeFavoriteHostel(user._id.toString(), propertyId);
+      res.status(200).json({ message: 'Property removed from favorites' });
+    } catch (error) {
+      console.log("Error removing property from favorites", error);
+      res.status(500).json({ message: 'Failed to remove property from favorites' });
+    }
+
+  } catch (error) {
+    next(error);
+  }
+}
 
 }

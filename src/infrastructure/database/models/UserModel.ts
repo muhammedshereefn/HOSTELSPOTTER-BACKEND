@@ -7,6 +7,8 @@ const bookingHistorySchema = new mongoose.Schema({
   roomName: { type: String, required: true },
   bedQuantity: { type: Number, required: true },
   bookedAt: { type: Date, required: true },
+  bookingDate: { type: Date, required: true },
+  status: {type:String,required:true,enum : ['Success', 'Cancelled'],default:'Success'}
 }, { _id: true });
 
 
@@ -35,5 +37,6 @@ const userSchema = new mongoose.Schema({
   isBlocked: {type:Boolean,required:true,default:false},
   bookingHistory: { type: [bookingHistorySchema], default: [] },
   wallet: { type: walletSchema, default: { balance: 0, history: [] } },
+  favHostels: [{ propertyId: { type: String, required: true }, propertyName: { type: String, required: true } }]
 });
 export const UserModel = mongoose.model('User', userSchema);

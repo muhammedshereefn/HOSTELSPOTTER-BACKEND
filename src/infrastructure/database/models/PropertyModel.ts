@@ -6,8 +6,6 @@ const propertySchema = new mongoose.Schema({
   state: { type: String, required: true },
   district: { type: String, required: true },
   city: { type: String, required: true },
-  ownerName: { type: String, required: true },
-  ownerEmail: { type: String, required: true },
   ownerContact: { type: String, required: true },
   rent: { type: Number, required: true },
   deposite: { type: Number, required: true },
@@ -15,7 +13,6 @@ const propertySchema = new mongoose.Schema({
   policies: { type: [String], required: true },
   facilities: { type: [String], required: true },
   category: { type: String, required: true },
-  availablePlans: { type: [String], required: true },
   nearbyAccess: { type: [String], required: true },
   roomQuantity: { type: Number, required: true },
   vendorId: { type:mongoose.Schema.Types.ObjectId, ref:'Vendor' ,required:true},
@@ -29,6 +26,7 @@ const propertySchema = new mongoose.Schema({
   longitude: { type: Number, required: true }, 
   latitude: { type: Number, required: true }, 
   bookingCount: { type: Number, default: 0 },
+  generatedIncome: { type: Number, default: 0 }, 
 },{ timestamps: true });
 
 export const PropertyModel = mongoose.model('Property', propertySchema);

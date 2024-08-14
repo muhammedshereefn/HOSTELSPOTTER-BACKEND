@@ -25,6 +25,7 @@ import { createOrder,verifyPaymentSignature } from '../../infrastructure/payment
 import { RefreshTokenUseCase } from '../../application/use-cases/vendor/RefreshTokenUseCase';
 import { RevenueRepository } from '../../infrastructure/repositories/RevenueRepository';
 import { Revenue } from '../../domain/entities/Revenue';
+import { PropertyModel } from '../../infrastructure/database/models/PropertyModel';
 
 
 
@@ -219,8 +220,6 @@ export class VendorController {
       district,
       city,
 
-      ownerName,
-      ownerEmail,
       ownerContact,
       rent,
       deposite,
@@ -228,7 +227,6 @@ export class VendorController {
       policies,
       facilities,
       category,
-      availablePlans,
       nearbyAccess,
       roomQuantity,
       hostelImages,
@@ -254,8 +252,6 @@ export class VendorController {
       district,
       city,
 
-      ownerName,
-      ownerEmail,
       ownerContact,
       rent,
       deposite,
@@ -263,7 +259,6 @@ export class VendorController {
       policies: policies ? policies.split(',').map((item: string) => item.trim()) : [],
       facilities: facilities ? facilities.split(',').map((item: string) => item.trim()) : [],
       category,
-      availablePlans: availablePlans ? availablePlans.split(',').map((item: string) => item.trim()) : [],
       nearbyAccess: nearbyAccess ? nearbyAccess.split(',').map((item: string) => item.trim()) : [],
       roomQuantity,
       hostelImages,
@@ -429,9 +424,7 @@ export class VendorController {
     const users = await UserModel.find(
       { 'bookingHistory.hostelName': hostelName },
       { name: 1, contact: 1, bookingHistory: 1 }
-    ).lean(); //get plain JavaScript objects : lean()
-
-    // Flatten the booking histories for the specified hostel
+    ).lean(); 
     const bookings = users.flatMap(user =>
       user.bookingHistory
         .filter(booking => booking.hostelName === hostelName)
@@ -441,6 +434,9 @@ export class VendorController {
           roomName: booking.roomName,
           bedQuantity: booking.bedQuantity,
           bookedAt: booking.bookedAt,
+          status : booking.status,
+          bookingDate : booking.bookingDate,
+          
         }))
     );
 
@@ -449,6 +445,47 @@ export class VendorController {
     next(error);
   }
 }
+
+
+static async getAllVendorBookings(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { vendorId } = req.body
+
+    // Find all properties for the vendor
+    const properties = await PropertyModel.find({ vendorId: vendorId }, { hostelName: 1 }).lean();
+
+    // Get the hostel names of the vendor's properties
+    const hostelNames = properties.map((property: { hostelName: string }) => property.hostelName);
+
+    // Find all users who have bookings in any of the vendor's properties
+    const users = await UserModel.find(
+      { 'bookingHistory.hostelName': { $in: hostelNames } },
+      { name: 1, contact: 1, bookingHistory: 1 }
+    ).lean(); 
+
+    // Extract and format all bookings from these users
+    const bookings = users.flatMap(user =>
+      user.bookingHistory
+        .filter((booking: { hostelName: string }) => hostelNames.includes(booking.hostelName))
+        .map((booking: any) => ({
+          name: user.name,
+          contact: user.contact,
+          hostelName: booking.hostelName,
+          roomName: booking.roomName,
+          bedQuantity: booking.bedQuantity,
+          bookedAt: booking.bookedAt,
+          status: booking.status,
+          bookingDate: booking.bookingDate,
+        }))
+    );
+
+    res.status(200).json(bookings);
+  } catch (error) {
+    next(error);
+  }
+}
+
+
 
 
 static async getVendorProfile(req: Request, res: Response, next: NextFunction) {

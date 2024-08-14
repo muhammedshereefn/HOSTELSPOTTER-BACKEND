@@ -30,11 +30,14 @@ router.get('/properties/:id', UserController.getPropertybyId);
 //------------------------Payments-------------------------------
 router.post('/pay', userTokenVerify, UserController.createSlotBookingOrder);
 router.post('/verify-payment', userTokenVerify, UserController.verifySlotBookingPayment);
-
+router.post('/pay-with-wallet', userTokenVerify, UserController.payWithWallet);
 //------------------------SlotBooking----------------------------
 router.get('/booking-history', userTokenVerify, UserController.getBookingHistory);
 router.delete('/booking-history/:id', userTokenVerify, UserController.cancelBooking);
 
-
+//------------------------FavoriteHostels-------------------------
+router.post('/favorites', userTokenVerify, UserController.addFavoriteHostel);
+router.get('/getfavorites', userTokenVerify, UserController.getFavoriteHostels);
+router.delete('/favorites/:propertyId', userTokenVerify, UserController.removeFavoriteHostel);
 export default router;
 
