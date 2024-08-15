@@ -64,7 +64,8 @@ io.on('connection', (socket) => {
   });
 
   socket.on('join-chat', (data) => {
-    const { userId, vendorId } = data;
+    const { userId, vendorId } 
+  
     const room = `chat-${userId}-${vendorId}`;
     socket.join(room);
   });

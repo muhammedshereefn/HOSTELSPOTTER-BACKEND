@@ -451,6 +451,8 @@ static async getAllVendorBookings(req: Request, res: Response, next: NextFunctio
   try {
     const { vendorId } = req.body
 
+    console.log(vendorId);
+    
     // Find all properties for the vendor
     const properties = await PropertyModel.find({ vendorId: vendorId }, { hostelName: 1 }).lean();
 
